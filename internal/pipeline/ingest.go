@@ -1,4 +1,4 @@
-package pattern
+package pipeline
 
 import (
 	"flag"
@@ -8,13 +8,21 @@ import (
 	"strings"
 )
 
+// Domain encapsulates a domain and the MX hosts on successful lookup,
+// and the error if note present
+type Domain struct {
+	Name    string   `json:"name"`
+	MXHosts []string `json:"mx_hosts"`
+	Error   string   `json:"error"`
+}
+
 // Ingest reads domains from stdin or a file, returning
 // a string channel and error
-func Ingest(done <-chan bool) (<-chan string, error) {
+func Ingest(done <-chan bool) (<-chan Domain, error) {
 	flag.Parse()
 	var data []byte
 	var err error
-	domains := make(chan string)
+	domains := make(chan Domain)
 	switch flag.NArg() {
 	case 0:
 		data, err = ioutil.ReadAll(os.Stdin)
@@ -31,7 +39,7 @@ func Ingest(done <-chan bool) (<-chan string, error) {
 			select {
 			case <-done:
 				return
-			case domains <- domain:
+			case domains <- Domain{Name: domain}:
 			}
 		}
 		close(domains)

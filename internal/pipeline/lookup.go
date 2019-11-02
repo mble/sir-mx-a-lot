@@ -1,24 +1,25 @@
-package pattern
+package pipeline
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"time"
+
+	"github.com/mble/sir-mx-a-lot/internal/logger"
 )
 
 // LookMX receives a channel of domains and ranges over them, looking up the MX records for each domain and returning
 // a channel of results
-func LookMX(done <-chan bool, domains <-chan string, resolver *net.Resolver, workerID int) <-chan string {
+func LookMX(done <-chan bool, domains <-chan Domain, resolver *net.Resolver, workerID int) <-chan Domain {
 	const timeout = 500 * time.Millisecond
-	processed := make(chan string)
+	processed := make(chan Domain)
 	go func() {
 		for domain := range domains {
 			select {
 			case <-done:
 				return
 			case processed <- domain:
-				if domain != "" {
+				if domain.Name != "" {
 					mx(domain, resolver, timeout)
 				}
 			}
@@ -28,15 +29,16 @@ func LookMX(done <-chan bool, domains <-chan string, resolver *net.Resolver, wor
 	return processed
 }
 
-func mx(domain string, resolver *net.Resolver, timeout time.Duration) {
+func mx(domain Domain, resolver *net.Resolver, timeout time.Duration) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	mxs, err := resolver.LookupMX(ctx, domain)
+	mxs, err := resolver.LookupMX(ctx, domain.Name)
 	if err != nil {
-		fmt.Printf("%s: %s\n", domain, err)
+		domain.Error = err.Error()
 	}
 	for _, mx := range mxs {
-		fmt.Printf("%s: %s\n", domain, mx.Host)
+		domain.MXHosts = append(domain.MXHosts, mx.Host)
 	}
+	logger.Log(domain)
 }

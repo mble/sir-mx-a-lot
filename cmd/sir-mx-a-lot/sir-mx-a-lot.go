@@ -3,7 +3,7 @@ package main
 import (
 	"runtime"
 
-	"github.com/mble/sir-mx-a-lot/internal/pattern"
+	"github.com/mble/sir-mx-a-lot/internal/pipeline"
 	"github.com/mble/sir-mx-a-lot/pkg/resolver"
 )
 
@@ -15,16 +15,16 @@ func main() {
 
 	resolver := resolver.NewResolver()
 
-	domains, err := pattern.Ingest(done)
+	domains, err := pipeline.Ingest(done)
 	if err != nil {
 		panic(err)
 	}
 
-	workers := make([]<-chan string, numWorkers)
+	workers := make([]<-chan pipeline.Domain, numWorkers)
 	for i := 0; i < numWorkers; i++ {
-		workers[i] = pattern.LookMX(done, domains, resolver, i)
+		workers[i] = pipeline.LookMX(done, domains, resolver, i)
 	}
 
-	for range pattern.Merge(done, workers...) {
+	for range pipeline.Merge(done, workers...) {
 	}
 }
