@@ -1,4 +1,11 @@
 BINARY := sir-mx-a-lot
-PWD := $(pwd)
-all:
+
+all: install
+
+.PHONY: build
+build:
 	go build -race -o $(BINARY) cmd/sir-mx-a-lot/sir-mx-a-lot.go
+
+.PHONY: install
+install:
+	go install -i -race -v ./...
